@@ -1,13 +1,9 @@
 from langgraph.pregel import Pregel
-
-from simple_agent.graph import graph, read_preference, update_preference, utc_now
+# Pregel est le moteur d’exécution qui orchestre les étapes et les boucles d’un graphe LangGraph.
+from tourism_agent.graph import graph
 
 
 def test_graph_compiles() -> None:
     assert isinstance(graph, Pregel)
 
 
-def test_utc_now_tool() -> None:
-    result = utc_now.invoke({})
-    assert isinstance(result, str)
-    assert "T" in result

@@ -1,7 +1,7 @@
 [project]
-name = "simple-agent-template"
+name = "tourism_agent"
 version = "0.1.0"
-description = "Minimal LangChain agent template for LangSmith/LangGraph deployment"
+description = "tourism agent"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -25,5 +25,5 @@ dev = [
 ]
 
 [tool.uv.build-backend]
-module-name = "simple_agent"
+module-name = "tourism_agent"
 source-include = ["langgraph.json", ".env.example", "Makefile", "tests/**"]

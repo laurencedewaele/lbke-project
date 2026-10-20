@@ -3,9 +3,7 @@
   "python_version": "3.12",
   "dependencies": ["."],
   "graphs": {
-    "agent": "simple_agent.graph:graph",
-    "test_graph": "simple_agent.test_graph:graph",
-    "bonus_langgraph_agent": "bonus_langgraph_agent.graph:graph"
+    "tourism_agent": "tourism_agent.graph:graph"
   },
   "env": ".env",
   "image_distro": "wolfi"

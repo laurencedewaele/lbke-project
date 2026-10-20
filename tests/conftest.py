@@ -1,3 +1,4 @@
+# Configure les tests asynchrones pour utiliser asyncio.
 import pytest
 
 

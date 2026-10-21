@@ -20,8 +20,8 @@ workflow.add_conditional_edges(
     "analyze_preferences",
     staytype_condition,
     {
-        "respond_with_confirmation": "respond_with_confirmation",
-        "ask_for_details": "ask_for_details"
+        "detected criteria": "respond_with_confirmation",
+        "need_details": "ask_for_details"
     }
 )
 workflow.add_edge("respond_with_confirmation", END)

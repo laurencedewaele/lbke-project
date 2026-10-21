@@ -14,5 +14,8 @@ model = init_chat_model(
     model_provider="openai",
     base_url="https://openrouter.ai/api/v1",
     api_key=os.environ["OPENROUTER_API_KEY"],
-    temperature=0
+    temperature=0,
+    # Sous `langgraph dev` (stream_mode "messages"), with_structured_output passe en
+    # streaming et l'usage des tokens est perdu : LangSmith n'affiche alors aucun token.
+    disable_streaming=True
 )

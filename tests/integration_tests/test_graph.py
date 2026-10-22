@@ -1,10 +1,8 @@
-import os
-
 import pytest
 from langchain_core.messages import HumanMessage
 
 from tourism_agent.graph import graph
-from tourism_agent.models.models import StayType
+from tourism_agent.schemas.criteria import StayType
 
 pytestmark = pytest.mark.anyio
 

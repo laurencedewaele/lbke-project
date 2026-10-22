@@ -1,14 +1,19 @@
+
 tourism_agent/
 ├── graph.py                                Assemble et compile le graphe LangGraph
 ├── llm.py                                  Initialise le modèle de chat
 ├── utils.py                                Affiche l’état et l’historique des messages
 ├── conditions/
 │   └── staytype_condition.py               Oriente le flux selon les critères identifiés
-├── models/
-│   └── models.py                           Définit l’état et les modèles de critères
+├── schemas/
+│   ├── context.py                          Définit le contexte d’exécution (nom du modèle)
+│   ├── criteria.py                         Définit les types de séjour et les modèles de critères
+│   └── state.py                            Définit l’état du graphe
 ├── nodes/
 │   ├── analyze_preferences_node.py         Analyse et fusionne les préférences
 │   ├── ask_for_details_node.py             Demande des précisions
 │   └── respond_with_confirmation_node.py   Confirme les préférences détectées
 └── prompts/
     └── prompts.py                          Contient les prompts système par modèle
+
+

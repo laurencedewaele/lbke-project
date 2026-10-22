@@ -1,9 +1,11 @@
-from ..models.models import State, StayType
+from ..schemas.state import State
+from ..schemas.criteria import StayType
 from langchain_core.messages import AIMessage
 
 def ask_for_details_node(state: State) -> dict:
-    # Récupération des types de séjour disponibles
-    formatted_stay_types = "\n".join(f"- {stay_type.value}" for stay_type in StayType)
+    # Récupération des libellés des types de séjour disponibles, sous forme de liste à puces
+    # (séparateur dédié : certains libellés contiennent eux-mêmes une virgule)
+    formatted_stay_types = "- " + StayType.infos(separator="\n- ")
 
     # Template statique
     full_response = (
@@ -11,7 +13,4 @@ def ask_for_details_node(state: State) -> dict:
         "Pourriez-vous m'indiquer vos préférences parmi les choix suivants :\n\n"
         f"{formatted_stay_types}\n"
     )
-    return {
-        "answer": full_response,
-        "messages": [AIMessage(content=full_response)]
-    }
+    return {"messages": [AIMessage(content=full_response)]}

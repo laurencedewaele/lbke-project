@@ -1,21 +1,28 @@
-from langgraph.graph import MessagesState
 from pydantic import BaseModel, Field
 from typing import Optional
 from enum import Enum
 
 
+# Définition de StayType avec une valeur technique et un libellé personnalisé
 class StayType(str, Enum):
-    BEACH = "en bord de mer, à la plage"
-    COUNTRYSIDE = "à la campagne"
-    MOUNTAINS = "à la montagne"
-    CITY = "en ville"
-    SPORT = "activités sportives"
-    RELAX = "détente"
-    ACCESS = "accessibilité pour personne handicapée ou à mobilité réduite"
+    BEACH = ("plage", "en bord de mer, à la plage")
+    COUNTRYSIDE = ("campagne", "à la campagne")
+    MOUNTAINS = ("montagne", "à la montagne")
+    CITY = ("ville", "en ville")
+    SPORT = ("sport", "activités sportives")
+    RELAX = ("détente", "détente")
+    ACCESS = ("accessibleHandicap", "accessibilité pour personne handicapée ou à mobilité réduite")
+
+    # Surcharge du constructeur
+    def __new__(cls, tech_id, label):
+        obj = str.__new__(cls, tech_id)
+        obj._value_ = tech_id
+        obj.label = label
+        return obj
 
     @classmethod
-    def infos(cls) -> str:
-        return ", ".join(stay.value for stay in cls)
+    def infos(cls, separator: str = ", ") -> str:
+        return separator.join(stay.label for stay in cls)
 
 class CriterionOpinion(BaseModel):
     """Avis exprimé par l'utilisateur ou détecté selon ses préférences de destination et d'activité."""
@@ -48,10 +55,3 @@ class CriteriaIdentificationResult(BaseModel):
         if not self.criteria:
             return {}
         return {c.criterion: {"avis": c.avis, "justification": c.justification} for c in self.criteria}
-
-
-class State(MessagesState):
-    # Contient messages par héritage
-    criteria: CriteriaIdentificationResult
-    request: str
-    answer: str

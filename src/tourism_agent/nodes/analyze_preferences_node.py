@@ -1,44 +1,54 @@
-from ..models.models import State, CriteriaIdentificationResult
-import os
-from ..prompts.prompts import system_prompt_dict
-from ..llm import model
-from langchain_core.messages import SystemMessage, HumanMessage
+import logging
 
-# Récupération du prompt système pour le modèle spécifié
-# L'existence d'un prompt système pour le modèle spécifié aura été vérifiée lors des tests.
-system_prompt = system_prompt_dict.get(os.environ["MODEL_NAME"], "")
+from ..schemas.state import State
+from ..schemas.criteria import CriteriaIdentificationResult, StayType
+from ..prompts.prompts import PREFERENCES_ANALYSIS_PROMPT_DICT, get_system_prompt
+from ..llm import LLM_ERRORS, get_model
+from ..schemas.context import Context
+from langchain_core.messages import SystemMessage, HumanMessage
+from langgraph.runtime import Runtime
+
+logger = logging.getLogger(__name__)
 
 # Définition d'une fonction d'analyse de préférences qui fusionne/enrichit l'état existant
-def analyze_preferences_node(state: State) -> dict:
-    # On analyse uniquement le dernier message reçu de l'utilisateur
-    user_message = state["messages"][-1].content
+def analyze_preferences_node(state: State, runtime: Runtime[Context]) -> dict:
+    # Contexte par défaut (MODEL_NAME) si aucun contexte n'est fourni à l'appel du graphe
+    model_name = (runtime.context or Context()).model_name
 
-    model_with_output = model.with_structured_output(CriteriaIdentificationResult)
+    # Récupération du prompt système pour le modèle spécifié
+    # (ConfigurationError explicite si aucun prompt n'est défini pour ce modèle)
+    system_prompt = get_system_prompt(PREFERENCES_ANALYSIS_PROMPT_DICT, model_name).format(
+        list_staytype=StayType.infos()
+    )
+
+    # On analyse uniquement le dernier message reçu de l'utilisateur
+    messages = state.get("messages") or []
+    if not messages:
+        logger.warning("Aucun message à analyser : critères inchangés")
+        return {}
+    user_message = messages[-1].text
+
+    # Si des critères ont déjà été déterminés, on les ajoute
+    query=f"Client: {user_message}"
+    previous_criteria = state.get("criteria")
+    if previous_criteria:
+        query = f"Client: {user_message}\nEtat des préférences actuelles : {previous_criteria.as_dict()}"
+
     messages = [
         SystemMessage(content=system_prompt),
-        HumanMessage(content=f"Client: {user_message}")
+        HumanMessage(content=query)
     ]
-    nouveaux_criteres = model_with_output.invoke(messages)
+    try:
+        model_with_output = get_model(model_name).with_structured_output(CriteriaIdentificationResult)
+        criteres = model_with_output.invoke(messages)
+    except LLM_ERRORS:
+        # Mode dégradé : on conserve les critères connus (ou aucun, ce qui mènera à une
+        # demande de précisions) plutôt que de faire échouer toute la conversation
+        logger.exception("Échec de l'analyse des préférences par le modèle '%s'", model_name)
+        return {} if previous_criteria else {"criteria": CriteriaIdentificationResult()}
 
-    # Récupération des anciens critères stockés dans l'état (si existants)
-    criteres_existants = state.get("criteria")
+    if not isinstance(criteres, CriteriaIdentificationResult):
+        logger.warning("Sortie structurée inattendue du modèle '%s' : %r", model_name, criteres)
+        return {} if previous_criteria else {"criteria": CriteriaIdentificationResult()}
 
-    if criteres_existants is None or not criteres_existants.criteria:
-        # S'il n'y avait rien, on prend la nouvelle analyse brute
-        criteres_finaux = nouveaux_criteres
-    else:
-        # Sinon, on procède à la fusion (merging)
-        criteres_dict = {c.criterion: c for c in criteres_existants.criteria}
-
-        if nouveaux_criteres.criteria:
-            for nouv in nouveaux_criteres.criteria:
-                # On ajoute ou met à jour le critère spécifique
-                criteres_dict[nouv.criterion] = nouv
-
-        # Reconstruction de la liste finale pour le Pydantic Model
-        criteres_finaux = CriteriaIdentificationResult(criteria=list(criteres_dict.values()))
-
-    return {
-        "criteria": criteres_finaux,
-        "request": user_message
-    }
+    return {"criteria": criteres}

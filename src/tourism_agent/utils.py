@@ -1,5 +1,5 @@
 from langchain_core.messages import BaseMessage
-from tourism_agent.models.models import State
+from tourism_agent.schemas.state import State
 
 def pretty_print_messages(messages: list[BaseMessage]) -> None:
     """Affiche proprement une liste de messages LangGraph/LangChain."""
@@ -21,7 +21,7 @@ def pretty_print_messages(messages: list[BaseMessage]) -> None:
 
 
 def print_state(state: State) -> None:
-    """Affiche le contenu du state : clés, critères (CRITERE - Avis : Justification), request, answer et messages."""
+    """Affiche le contenu du state : clés, critères (CRITERE - Avis : Justification) et messages."""
     print("=== CLÉS DISPONIBLES DANS LE STATE ===")
     print(list(state.keys()))
 
@@ -33,12 +33,6 @@ def print_state(state: State) -> None:
         for item in criteria_result.criteria:
             justification = item.justification or "Aucune justification fournie."
             print(f"{item.criterion.name} - {item.avis} : {justification}")
-
-    print("\n=== CONTENU DE 'request' ===")
-    print(state.get("request"))
-
-    print("\n=== CONTENU DE 'answer' ===")
-    print(state.get("answer"))
 
     print("\n=== HISTORIQUE DES MESSAGES ===")
     pretty_print_messages(state.get("messages", []))

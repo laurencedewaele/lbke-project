@@ -1,9 +1,11 @@
 from typing import Literal
-from ..models.models import State
+from ..schemas.state import State
 
-def staytype_condition(state: State) -> Literal["detected criteria", "need_details"]:
+def staytype_condition(state: State) -> Literal["criteria_detected", "need_details"]:
     # Utilise la propriété details_identified pour l'aiguillage
-    if state["criteria"].details_identified:
-        return "detected criteria"
+    # (critères absents, par exemple après un échec de l'analyse : on demande des précisions)
+    criteria = state.get("criteria")
+    if criteria is not None and criteria.details_identified:
+        return "criteria_detected"
     else:
         return "need_details"

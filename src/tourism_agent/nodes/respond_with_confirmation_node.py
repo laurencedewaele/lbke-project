@@ -1,8 +1,9 @@
-from ..models.models import State
+from ..schemas.state import State
 from langchain_core.messages import AIMessage
 
 def respond_with_confirmation_node(state: State) -> dict:
-    criteria_dict = state["criteria"].as_dict()
+    criteria = state.get("criteria")
+    criteria_dict = criteria.as_dict() if criteria else {}
 
     # Construction dynamique et instantanée de la réponse en Python
     intro = "Si j'ai bien compris votre demande, j'ai identifié les préférences suivantes :\n\n"
@@ -16,7 +17,4 @@ def respond_with_confirmation_node(state: State) -> dict:
     conclusion = "\n\nJe recherche dès maintenant les meilleures options correspondant à ces critères !"
 
     full_response = intro + body + conclusion
-    return {
-        "answer": full_response,
-        "messages": [AIMessage(content=full_response)]
-    }
+    return {"messages": [AIMessage(content=full_response)]}

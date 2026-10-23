@@ -10,6 +10,4 @@ build/
 dist/
 .DS_Store
 .langgraph_api/
-tourism_agent.txt
 graph.mmd
-graph.png

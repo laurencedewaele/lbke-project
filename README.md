@@ -1,110 +1,153 @@
-# Agent de tourisme
+# Tourism Agent
 
-Agent conversationnel LangGraph qui aide un client à trouver un séjour dans un catalogue :
-il comprend ses envies exprimées en langage naturel, recherche les séjours correspondants
-et lui fait une proposition argumentée.
+A conversational LangGraph agent that helps customers find a stay in a catalogue:
+it understands their wishes expressed in natural language, searches for matching stays
+and makes a reasoned proposal.
 
-## Fonctionnalités
+## Features
 
-- **Analyse des préférences** (`analyze_preferences`) : le LLM extrait, sous forme de sortie
-  structurée, un avis (souhaité / à éviter / non mentionné) et une courte justification pour
-  chaque type de séjour : plage, campagne, montagne, ville, sport, détente, accessibilité PMR.
-- **Conversation sur plusieurs tours** : les critères déjà identifiés sont transmis au LLM
-  à chaque nouveau message, qui les enrichit ou les corrige au lieu de repartir de zéro.
-- **Demande de précisions** (`ask_for_details`) : si aucune préférence positive n'est
-  détectée, l'agent liste les types de séjour proposés (réponse statique, sans LLM).
-- **Filtrage du catalogue** (`filter_matching_stays`) : recherche déterministe (sans LLM)
-  dans `data/data.json`, avec un score par séjour (`2/3`…) et un niveau de correspondance
-  (`parfait` / `partiel`), trié par pertinence.
-- **Proposition de séjours** (`respond_with_proposal`) : le LLM rédige la réponse à partir
-  de la conversation, des critères et des séjours retenus.
-- **Contrôle de l'entrée** (`reject_input`) : les messages invalides sont refusés avant
-  tout appel au LLM (voir [Mesures de protection](#mesures-de-protection)).
-- **Modèle configurable** : nom du modèle lu dans `MODEL_NAME`, surchargeable par run via
-  le contexte (`context={"model_name": ...}`), avec un prompt système dédié par modèle.
-  Les modèles sont appelés via OpenRouter.
+- **Preference analysis** (`analyze_preferences`): using structured output, the LLM extracts
+  an opinion (wanted / to avoid / not mentioned) and a short justification for each stay
+  type: beach, countryside, mountains, city, sport, relaxation, accessibility for people
+  with disabilities or reduced mobility.
+- **Multi-turn conversation**: criteria already identified are sent to the LLM with each
+  new message, which enriches or corrects them instead of starting from scratch.
+- **Request for details** (`ask_for_details`): if no positive preference is detected,
+  the agent lists the available stay types (static answer, no LLM call).
+- **Catalogue filtering** (`filter_matching_stays`): deterministic search (no LLM) in
+  `data/data.json`, with a score per stay (`2/3`…) and a match level
+  (`parfait` = full / `partiel` = partial), sorted by relevance.
+- **Stay proposal** (`respond_with_proposal`): the LLM writes the answer based on the
+  conversation, the criteria and the selected stays.
+- **Input check** (`reject_input`): invalid messages are rejected before any LLM call
+  (see [Safeguards](#safeguards)).
+- **Configurable model**: the model name is read from `MODEL_NAME` and can be overridden
+  per run through the context (`context={"model_name": ...}`), with a dedicated system
+  prompt per model. Models are called through OpenRouter.
 
-## Graphe
+## Graph
 
-![Graphe de l'agent de tourisme](graph.png)
+![Tourism agent graph](graph.png)
 
-## Mesures de protection
+## Repository architecture
 
-### Validation de l'entrée
+```
+src/tourism_agent/
+├── graph.py                                Builds and compiles the LangGraph graph
+├── llm.py                                  Initialises the chat models and lists the handled LLM errors
+├── exceptions.py                           Defines the agent errors (configuration, catalogue)
+├── utils.py                                Displays the state and the message history
+├── conditions/
+│   ├── input_condition.py                  Routes the flow according to the validity of the incoming message
+│   └── staytype_condition.py               Routes the flow according to the identified criteria
+├── schemas/
+│   ├── context.py                          Defines the run context (model name)
+│   ├── criteria.py                         Defines the stay types and the criteria models
+│   └── state.py                            Defines the graph state (messages, criteria, matching stays)
+├── nodes/
+│   ├── reject_input_node.py                Rejects an invalid message and removes it from the history
+│   ├── analyze_preferences_node.py         Analyses and merges the preferences
+│   ├── ask_for_details_node.py             Asks for more details
+│   ├── filter_matching_stays_node.py       Filters the catalogue according to the criteria (no LLM)
+│   ├── respond_with_proposal_node.py       Writes the answer with the proposed stays
+│   └── respond_with_confirmation_node.py   Confirms the detected preferences (not used in the graph)
+├── services/
+│   ├── input_validation.py                 Checks the user message before any LLM call
+│   └── filter_matching_stays.py            Loads the catalogue and selects the matching stays
+├── data/
+│   └── data.json                           Stay catalogue
+└── prompts/
+    └── prompts.py                          Contains the system prompts per model
 
-Une arête conditionnelle à l'entrée du graphe (`conditions/input_condition.py`,
-`services/input_validation.py`) n'oriente vers le LLM que les messages valides. Sont rejetés :
+tests/
+├── unit_tests/                             Unit tests (no network call)
+└── integration_tests/                      Integration tests (real LLM calls)
+```
 
-- l'absence de message ;
-- un dernier message qui n'est pas un message utilisateur (message système ou IA forgé,
-  pour limiter l'injection de prompt) ;
-- un message de plus de 300 caractères.
+## Safeguards
 
-Le nœud `reject_input` répond par un message explicite et **retire le message rejeté de
-l'historique**, pour qu'il ne soit pas renvoyé au LLM lors des tours suivants. La
-justification produite par le LLM est également limitée à 100 caractères par le schéma.
+### Input validation
 
-### Gestion des exceptions
+A conditional edge at the graph entry (`conditions/input_condition.py`,
+`services/input_validation.py`) only routes valid messages to the LLM. The following are rejected:
 
-- **Exceptions dédiées** (`exceptions.py`) : `TourismAgentError`, dont dérivent
-  `ConfigurationError` et `CatalogError`.
-- **Erreurs de configuration** (prompt absent pour le modèle, variable d'environnement
-  manquante) : non rattrapées, l'agent échoue immédiatement avec un message explicite.
-- **Erreurs LLM** (`llm.py`) : 3 nouvelles tentatives automatiques et délai maximal de 60 s
-  par requête. Les erreurs attendues (réseau, quota, refus du modèle, sortie structurée
-  non conforme) sont regroupées dans `LLM_ERRORS` et traitées en **mode dégradé** :
-  - analyse des préférences : les critères déjà connus sont conservés (ou, à défaut,
-    l'agent demande des précisions) ;
-  - proposition : une réponse de secours, construite sans LLM, liste les séjours trouvés.
-- **Catalogue** : fichier absent ou JSON invalide → `CatalogError`, rattrapée par le nœud
-  de filtrage qui poursuit sans séjour ; les entrées mal formées sont ignorées et journalisées.
+- no message at all;
+- a last message that is not a user message (forged system or AI message,
+  to limit prompt injection);
+- a message longer than 300 characters.
 
-## Tests automatiques
+The `reject_input` node answers with an explicit message and **removes the rejected
+message from the history**, so that it is not sent back to the LLM in later turns. The
+justification produced by the LLM is also limited to 100 characters by the schema.
 
-Tests unitaires (`tests/unit_tests`, sans appel réseau : le modèle est simulé) :
+### Exception handling
 
-- `test_configuration.py` : compilation du graphe.
-- `test_criteria.py` : libellés des types de séjour.
-- `test_prompts.py` : présence des prompts pour le modèle configuré.
-- `test_input_validation.py` : messages valides, limite de longueur, message non
-  utilisateur, absence de message, suppression du message rejeté, longueur de la justification.
-- `test_error_handling.py` : modèle sans prompt, aiguillage sans critères, catalogue
-  absent / invalide / partiellement mal formé, LLM en échec (critères conservés,
-  réponse de secours).
+- **Dedicated exceptions** (`exceptions.py`): `TourismAgentError`, from which
+  `ConfigurationError` and `CatalogError` derive.
+- **Configuration errors** (missing prompt for the model, missing environment variable):
+  not caught, the agent fails immediately with an explicit message.
+- **LLM errors** (`llm.py`): 3 automatic retries and a 60 s timeout per request.
+  Expected errors (network, quota, model refusal, structured output not matching the
+  schema) are grouped in `LLM_ERRORS` and handled in **degraded mode**:
+  - preference analysis: the known criteria are kept (or, failing that, the agent asks
+    for more details);
+  - proposal: a fallback answer, built without the LLM, lists the stays found.
+- **Catalogue**: missing file or invalid JSON → `CatalogError`, caught by the filtering
+  node, which continues without any stay; malformed entries are skipped and logged.
 
-Test d'intégration (`tests/integration_tests`, appelle réellement le LLM) :
+## Automated tests
 
-- `test_graph.py` : enrichissement des critères sur deux tours de conversation.
+Unit tests (`tests/unit_tests`, no network call: the model is mocked):
 
-## Démarrage rapide
+- `test_configuration.py`: graph compilation.
+- `test_criteria.py`: stay type labels.
+- `test_prompts.py`: prompts exist for the configured model.
+- `test_input_validation.py`: valid messages, length limit, non-user message,
+  no message, removal of the rejected message, justification length.
+- `test_error_handling.py`: model without prompt, routing without criteria, missing /
+  invalid / partially malformed catalogue, failing LLM (criteria kept, fallback answer).
 
-1. Installer les dépendances avec `uv` :
+Integration test (`tests/integration_tests`, actually calls the LLM):
+
+- `test_graph.py`: criteria enrichment over two conversation turns.
+
+Run the tests with pytest:
+
+```bash
+uv run pytest tests/unit_tests          # unit tests
+uv run pytest tests/integration_tests   # integration tests (requires OPENROUTER_API_KEY and MODEL_NAME)
+uv run pytest                           # all tests
+```
+
+## Quickstart
+
+1. Install the dependencies with `uv`:
 
 ```bash
 uv sync --dev
 ```
 
-2. Configurer l'environnement (`OPENROUTER_API_KEY`, `MODEL_NAME`, et optionnellement
-   `LANGSMITH_API_KEY` pour le tracing) :
+2. Configure the environment (`OPENROUTER_API_KEY`, `MODEL_NAME`, and optionally
+   `LANGSMITH_API_KEY` for tracing):
 
 ```bash
 cp .env.example .env
 ```
 
-3. Lancer en local :
+3. Run locally:
 
 ```bash
 uv run langgraph dev --studio-url https://eu.api.smith.langchain.com
 ```
 
-## Déploiement sur LangSmith Studio
+## Deploying to LangSmith Studio
 
-1. Pousser le projet sur un dépôt Git.
-2. Dans LangSmith, créer un nouveau Deployment à partir de ce dépôt.
-3. Définir les variables d'environnement (`OPENROUTER_API_KEY`, `MODEL_NAME`, optionnellement `LANGSMITH_API_KEY`).
-4. Déployer avec la configuration de `langgraph.json` (graphe `tourism_agent`).
+1. Push the project to a Git repository.
+2. In LangSmith, create a new Deployment from this repository.
+3. Set the environment variables (`OPENROUTER_API_KEY`, `MODEL_NAME`, optionally `LANGSMITH_API_KEY`).
+4. Deploy using the `langgraph.json` configuration (`tourism_agent` graph).
 
-## Documentation de référence
+## Reference docs
 
-- LangGraph : https://docs.langchain.com/oss/python/langgraph/overview
-- Déploiement LangChain : https://docs.langchain.com/oss/python/langchain/deploy
+- LangGraph: https://docs.langchain.com/oss/python/langgraph/overview
+- LangChain deployment: https://docs.langchain.com/oss/python/langchain/deploy

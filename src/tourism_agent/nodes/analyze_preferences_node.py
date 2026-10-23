@@ -1,5 +1,4 @@
 import logging
-
 from ..schemas.state import State
 from ..schemas.criteria import CriteriaIdentificationResult, StayType
 from ..prompts.prompts import PREFERENCES_ANALYSIS_PROMPT_DICT, get_system_prompt

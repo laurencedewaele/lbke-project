@@ -2,7 +2,6 @@ from pydantic import BaseModel, Field
 from typing import Optional
 from enum import Enum
 
-
 # Définition de StayType avec une valeur technique et un libellé personnalisé
 class StayType(str, Enum):
     BEACH = ("plage", "en bord de mer, à la plage")
@@ -34,7 +33,8 @@ class CriterionOpinion(BaseModel):
     )
     justification: Optional[str] = Field(
         default=None,
-        description="Justification brève et informelle de ton positionnement"
+        max_length=100,
+        description="Justification brève et informelle de ton positionnement (100 caractères maximum)"
     )
 
 class CriteriaIdentificationResult(BaseModel):
@@ -45,12 +45,14 @@ class CriteriaIdentificationResult(BaseModel):
         description="Un élément pour chaque type de séjour détecté.",
     )
 
+    # Indique si au moins un avis positif a été identifié parmi les critères.
     @property
     def details_identified(self) -> bool:
         if not self.criteria:
             return False
-        return any(c.avis is not None for c in self.criteria)
+        return any(c.avis is True for c in self.criteria)
 
+    # Transforme le résultat en dictionnaire pour un accès facile par type de séjour.
     def as_dict(self) -> dict[StayType, dict]:
         if not self.criteria:
             return {}

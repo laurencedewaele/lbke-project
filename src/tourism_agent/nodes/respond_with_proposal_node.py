@@ -1,5 +1,4 @@
 import logging
-
 from langchain_core.messages import AIMessage, SystemMessage
 from langgraph.runtime import Runtime
 from ..schemas.context import Context
@@ -8,7 +7,6 @@ from ..schemas.state import State
 from ..prompts.prompts import STAYS_PROPOSAL_PROMPT_DICT, get_system_prompt
 
 logger = logging.getLogger(__name__)
-
 
 def build_fallback_proposal(matching_stays: list[dict]) -> str:
     """Réponse construite sans LLM, utilisée lorsque le modèle est indisponible."""

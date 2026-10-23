@@ -1,3 +1,8 @@
+"""
+Ce nœud génère une réponse de confirmation basée sur les critères identifiés dans l'état.
+Il n'est pas implémenté dans le graphe définitif.
+"""
+
 from ..schemas.state import State
 from langchain_core.messages import AIMessage
 

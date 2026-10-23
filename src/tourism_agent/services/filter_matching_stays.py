@@ -11,9 +11,7 @@ logger = logging.getLogger(__name__)
 DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "data.json"
 
 
-# Chargé au premier besoin puis mis en cache. Contrairement à un chargement à l'import,
-# un catalogue absent ou corrompu n'empêche pas le graphe de se charger ; et comme
-# lru_cache ne mémorise pas les exceptions, le chargement est retenté au run suivant.
+# Chargé au premier besoin puis mis en cache.
 @lru_cache
 def load_catalog(path: Path = DATA_PATH) -> list[dict]:
     """Charge le catalogue des séjours, en écartant les entrées mal formées."""
@@ -65,6 +63,7 @@ def filter_matching_stays(criteria: CriteriaIdentificationResult) -> list[dict]:
 
     if not active_criteria:
         # Si aucun critère n'est actif, tous les séjours sont des matchs parfaits de base
+        # Le modèle analysera ensuite la pertinence de chaque séjour.
         return [{"nom": item["nom"], "match": "parfait", "score": "N/A"} for item in catalog]
 
     results = []

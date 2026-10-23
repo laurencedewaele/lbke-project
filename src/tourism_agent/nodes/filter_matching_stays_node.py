@@ -1,12 +1,10 @@
 import logging
-
 from ..exceptions import CatalogError
 from ..schemas.criteria import CriteriaIdentificationResult
 from ..schemas.state import State
 from ..services.filter_matching_stays import filter_matching_stays
 
 logger = logging.getLogger(__name__)
-
 
 def filter_matching_stays_node(state: State) -> dict:
     # Filtrage déterministe du catalogue à partir des critères identifiés (pas d'appel LLM)

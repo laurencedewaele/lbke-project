@@ -1,19 +1,28 @@
 
 tourism_agent/
 ├── graph.py                                Assemble et compile le graphe LangGraph
-├── llm.py                                  Initialise le modèle de chat
+├── llm.py                                  Initialise les modèles de chat et liste les erreurs LLM gérées
+├── exceptions.py                           Définit les erreurs de l'agent (configuration, catalogue)
 ├── utils.py                                Affiche l’état et l’historique des messages
 ├── conditions/
+│   ├── input_condition.py                  Oriente le flux selon la validité du message reçu
 │   └── staytype_condition.py               Oriente le flux selon les critères identifiés
 ├── schemas/
 │   ├── context.py                          Définit le contexte d’exécution (nom du modèle)
 │   ├── criteria.py                         Définit les types de séjour et les modèles de critères
-│   └── state.py                            Définit l’état du graphe
+│   └── state.py                            Définit l’état du graphe (messages, critères, séjours trouvés)
 ├── nodes/
+│   ├── reject_input_node.py                Rejette un message invalide et le retire de l'historique
 │   ├── analyze_preferences_node.py         Analyse et fusionne les préférences
 │   ├── ask_for_details_node.py             Demande des précisions
-│   └── respond_with_confirmation_node.py   Confirme les préférences détectées
+│   ├── filter_matching_stays_node.py       Filtre le catalogue selon les critères (sans LLM)
+│   ├── respond_with_proposal_node.py       Rédige la réponse avec les séjours proposés
+│   └── respond_with_confirmation_node.py   Confirme les préférences détectées (non utilisé dans le graphe)
+├── services/
+│   ├── input_validation.py                 Contrôle le message utilisateur avant tout appel au LLM
+│   └── filter_matching_stays.py            Charge le catalogue et sélectionne les séjours correspondants
+├── data/
+│   └── data.json                           Catalogue des séjours
 └── prompts/
     └── prompts.py                          Contient les prompts système par modèle
-
 

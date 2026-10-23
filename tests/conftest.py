@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 # on le charge donc ici, avant l'import des modules de test.
 load_dotenv()
 
-
 @pytest.fixture(scope="session")
 def anyio_backend() -> str:
     return "asyncio"
